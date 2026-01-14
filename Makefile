@@ -32,10 +32,7 @@ define Package/$(PKG_NAME)
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=TollGate Basic Module
-	DEPENDS:=$(RUST_ARCH_DEPENDS) +nodogsplash +luci +jq
-	PROVIDES:=nodogsplash-files
-	CONFLICTS:=
-	REPLACES:=nodogsplash base-files
+	DEPENDS:=$(RUST_ARCH_DEPENDS)
 endef
 
 define Package/$(PKG_NAME)/description
