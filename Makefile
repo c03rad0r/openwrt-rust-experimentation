@@ -21,20 +21,18 @@ PKG_MAINTAINER:=Your Name <your@email.com>
 PKG_LICENSE:=CC0-1.0
 PKG_LICENSE_FILES:=LICENSE
 
-PKG_BUILD_DEPENDS:=golang/host
+PKG_BUILD_DEPENDS:=rust/host
 PKG_BUILD_PARALLEL:=1
 PKG_USE_MIPS16:=0
 
-GO_PKG:=github.com/OpenTollGate/tollgate-wrt
-
 include $(INCLUDE_DIR)/package.mk
-$(eval $(call GoPackage))
+include $(INCLUDE_DIR)/rust.mk
 
 define Package/$(PKG_NAME)
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=TollGate Basic Module
-	DEPENDS:=$(GO_ARCH_DEPENDS) +nodogsplash +luci +jq
+	DEPENDS:=$(RUST_ARCH_DEPENDS) +nodogsplash +luci +jq
 	PROVIDES:=nodogsplash-files
 	CONFLICTS:=
 	REPLACES:=nodogsplash base-files
@@ -46,45 +44,15 @@ endef
 
 define Build/Prepare
 	$(call Build/Prepare/Default)
-	echo "DEBUG: Contents of go.mod after prepare:"
-	cat $(PKG_BUILD_DIR)/go.mod
-endef
-
-define Build/Configure
 endef
 
 define Build/Compile
-	cd $(PKG_BUILD_DIR) && \
-	echo "DEBUG: GOARCH=$(GOARCH) GOMIPS=$(GOMIPS)" && \
-	env GOOS=linux \
-	GOARCH=$(GOARCH) \
-	GOMIPS=$(GOMIPS) \
-	go build -o $(PKG_NAME) -trimpath -ldflags="-s -w" main.go
-	
-	# Build CLI tool
-	cd $(PKG_BUILD_DIR)/src/cmd/tollgate-cli && \
-	env GOOS=linux \
-	GOARCH=$(GOARCH) \
-	GOMIPS=$(GOMIPS) \
-	go build -o tollgate -trimpath -ldflags="-s -w"
-
-	# Compress binaries with UPX if USE_UPX is enabled
-	@if [ "$(USE_UPX)" = "1" ]; then \
-		if which upx >/dev/null 2>&1; then \
-			ls -lh $(PKG_BUILD_DIR)/$(PKG_NAME) $(PKG_BUILD_DIR)/src/cmd/tollgate-cli/tollgate; \
-			upx $(UPX_FLAGS) $(PKG_BUILD_DIR)/$(PKG_NAME); \
-			upx $(UPX_FLAGS) $(PKG_BUILD_DIR)/src/cmd/tollgate-cli/tollgate; \
-			ls -lh $(PKG_BUILD_DIR)/$(PKG_NAME) $(PKG_BUILD_DIR)/src/cmd/tollgate-cli/tollgate; \
-		fi; \
-	fi
+	$(call Rust/Compile)
 endef
 
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/$(PKG_NAME) $(1)/usr/bin/tollgate-wrt
-	
-	# Install CLI tool in system PATH
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/cmd/tollgate-cli/tollgate $(1)/usr/bin/tollgate
+	$(INSTALL_BIN) $(RUST_BIN_DIR)/$(PKG_NAME) $(1)/usr/bin/tollgate-wrt
 	
 	# Init script
 	$(INSTALL_DIR) $(1)/etc/init.d

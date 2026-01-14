@@ -28,95 +28,86 @@ jobs:
             "include": [
               {
                 "architecture": "aarch64_cortex-a53",
-                "goarch": "arm64",
+                "rust_target": "aarch64-unknown-linux-gnu",
                 "sdk": "mediatek-filogic",
                 "openwrt_version": "24.10.1"
               },
               {
                 "architecture": "aarch64_cortex-a53",
-                "goarch": "arm64",
+                "rust_target": "aarch64-unknown-linux-gnu",
                 "sdk": "mediatek-filogic",
                 "openwrt_version": "24.10.1",
                 "compression": "upx-ultra-brute"
               },
               {
                 "architecture": "aarch64_cortex-a72",
-                "goarch": "arm64",
+                "rust_target": "aarch64-unknown-linux-gnu",
                 "sdk": "bcm27xx-bcm2711",
                 "openwrt_version": "24.10.1"
               },
               {
                 "architecture": "aarch64_cortex-a72",
-                "goarch": "arm64",
+                "rust_target": "aarch64-unknown-linux-gnu",
                 "sdk": "bcm27xx-bcm2711",
                 "openwrt_version": "24.10.1",
                 "compression": "upx-ultra-brute"
               },
               {
                 "architecture": "arm_cortex-a7",
-                "goarch": "arm",
-                "goarm": "7",
+                "rust_target": "armv7-unknown-linux-gnueabihf",
                 "sdk": "bcm27xx-bcm2709",
                 "openwrt_version": "24.10.1"
               },
               {
                 "architecture": "arm_cortex-a7",
-                "goarch": "arm",
-                "goarm": "7",
+                "rust_target": "armv7-unknown-linux-gnueabihf",
                 "sdk": "bcm27xx-bcm2709",
                 "openwrt_version": "24.10.1",
                 "compression": "upx-ultra-brute"
               },
               {
                 "architecture": "mipsel_24kc",
-                "goarch": "mipsle",
-                "gomips": "softfloat",
+                "rust_target": "mipsel-unknown-linux-gnu",
                 "sdk": "ramips-mt7621",
                 "openwrt_version": "24.10.1"
               },
               {
                 "architecture": "mipsel_24kc",
-                "goarch": "mipsle",
-                "gomips": "softfloat",
+                "rust_target": "mipsel-unknown-linux-gnu",
                 "sdk": "ramips-mt7621",
                 "openwrt_version": "24.10.1",
                 "compression": "upx-ultra-brute"
               },
               {
                 "architecture": "mips_24kc",
-                "goarch": "mips",
-                "gomips": "softfloat",
+                "rust_target": "mips-unknown-linux-gnu",
                 "sdk": "ath79-generic",
                 "openwrt_version": "24.10.1"
               },
               {
                 "architecture": "mips_24kc",
-                "goarch": "mips",
-                "gomips": "softfloat",
+                "rust_target": "mips-unknown-linux-gnu",
                 "sdk": "ath79-generic",
                 "openwrt_version": "24.10.1",
                 "compression": "upx-fast"
               },
               {
                 "architecture": "mips_24kc",
-                "goarch": "mips",
-                "gomips": "softfloat",
+                "rust_target": "mips-unknown-linux-gnu",
                 "sdk": "ath79-generic",
                 "openwrt_version": "24.10.1",
                 "compression": "upx-best"
               },
               {
                 "architecture": "mips_24kc",
-                "goarch": "mips",
-                "gomips": "softfloat",
+                "rust_target": "mips-unknown-linux-gnu",
                 "sdk": "ath79-generic",
                 "openwrt_version": "24.10.1",
                 "compression": "upx-brute"
               },
               {
                 "architecture": "mips_24kc",
-                "goarch": "mips",
-                "gomips": "softfloat",
+                "rust_target": "mips-unknown-linux-gnu",
                 "sdk": "ath79-generic",
                 "openwrt_version": "24.10.1",
                 "compression": "upx-ultra-brute"
@@ -233,13 +224,11 @@ jobs:
           # Move sources to sdk folder
           mv ${{ env.PACKAGE_NAME }} /builder/package/${{ env.PACKAGE_NAME }}
 
-      - name: Install Golang
+      - name: Install Rust
         run: |
-          # Add golang-backports repository
-          echo "deb https://deb.debian.org/debian bookworm-backports main" > /etc/apt/sources.list.d/backports.list
-          apt-get update
-          # Install Go from backports
-          apt-get install -y -t bookworm-backports golang-go
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source "$HOME/.cargo/env"
+          rustup target add ${{ matrix.rust_target }}
 
       - name: Install UPX
         if: contains(matrix.compression, 'upx')
@@ -262,10 +251,6 @@ jobs:
         shell: bash
         run: |
           cd /builder
-          # Only set GOMIPS for MIPS architectures (https://stackoverflow.com/q/55154143)
-          if [ "${{ matrix.goarch }}" = "mips" ] || [ "${{ matrix.goarch }}" = "mipsle" ]; then
-            export GOMIPS=softfloat
-          fi
           
           # Set UPX flags from compression type (e.g., upx-fast -> --fast)
           if [ -n "${{ matrix.compression }}" ]; then
@@ -276,8 +261,7 @@ jobs:
             export USE_UPX=0
           fi
           
-          env GOARCH=${{ matrix.goarch }} \
-            GOMIPS=${{ matrix.gomips }} \
+          env RUST_TARGET=${{ matrix.rust_target }} \
             PACKAGE_VERSION=${{ needs.determine-versioning.outputs.package_version }} \
             USE_UPX=$USE_UPX \
             UPX_FLAGS="$UPX_FLAGS" \
