@@ -180,6 +180,8 @@ jobs:
           echo "CONFIG_PACKAGE_nodogsplash=y" >> .config
           echo "CONFIG_PACKAGE_luci=y" >> .config
           echo "CONFIG_PACKAGE_jq=y" >> .config
+          # Disable downloading of pre-compiled LLVM to avoid 404 errors
+          echo "CONFIG_RUST_DOWNLOAD_CI_LLVM=n" >> .config
 
       - name: Compile Package
         shell: bash
