@@ -1,0 +1,20 @@
+# Build artifacts
+bin/
+*.ipk
+tollgate-wrt
+src/cmd/tollgate-cli/tollgate
+artifacts/
+event.json
+event.err
+
+# Documentation
+docs/
+reference-material/
+CLI_IMPLEMENTATION.md
+PULL_REQUEST.md
+
+# Tests
+tests/
+
+# Helper scripts
+compile-to-router.sh
