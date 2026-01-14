@@ -38,79 +38,6 @@ jobs:
                 "sdk": "mediatek-filogic",
                 "openwrt_version": "24.10.1",
                 "compression": "upx-ultra-brute"
-              },
-              {
-                "architecture": "aarch64_cortex-a72",
-                "rust_target": "aarch64-unknown-linux-gnu",
-                "sdk": "bcm27xx-bcm2711",
-                "openwrt_version": "24.10.1"
-              },
-              {
-                "architecture": "aarch64_cortex-a72",
-                "rust_target": "aarch64-unknown-linux-gnu",
-                "sdk": "bcm27xx-bcm2711",
-                "openwrt_version": "24.10.1",
-                "compression": "upx-ultra-brute"
-              },
-              {
-                "architecture": "arm_cortex-a7",
-                "rust_target": "armv7-unknown-linux-gnueabihf",
-                "sdk": "bcm27xx-bcm2709",
-                "openwrt_version": "24.10.1"
-              },
-              {
-                "architecture": "arm_cortex-a7",
-                "rust_target": "armv7-unknown-linux-gnueabihf",
-                "sdk": "bcm27xx-bcm2709",
-                "openwrt_version": "24.10.1",
-                "compression": "upx-ultra-brute"
-              },
-              {
-                "architecture": "mipsel_24kc",
-                "rust_target": "mipsel-unknown-linux-gnu",
-                "sdk": "ramips-mt7621",
-                "openwrt_version": "24.10.1"
-              },
-              {
-                "architecture": "mipsel_24kc",
-                "rust_target": "mipsel-unknown-linux-gnu",
-                "sdk": "ramips-mt7621",
-                "openwrt_version": "24.10.1",
-                "compression": "upx-ultra-brute"
-              },
-              {
-                "architecture": "mips_24kc",
-                "rust_target": "mips-unknown-linux-gnu",
-                "sdk": "ath79-generic",
-                "openwrt_version": "24.10.1"
-              },
-              {
-                "architecture": "mips_24kc",
-                "rust_target": "mips-unknown-linux-gnu",
-                "sdk": "ath79-generic",
-                "openwrt_version": "24.10.1",
-                "compression": "upx-fast"
-              },
-              {
-                "architecture": "mips_24kc",
-                "rust_target": "mips-unknown-linux-gnu",
-                "sdk": "ath79-generic",
-                "openwrt_version": "24.10.1",
-                "compression": "upx-best"
-              },
-              {
-                "architecture": "mips_24kc",
-                "rust_target": "mips-unknown-linux-gnu",
-                "sdk": "ath79-generic",
-                "openwrt_version": "24.10.1",
-                "compression": "upx-brute"
-              },
-              {
-                "architecture": "mips_24kc",
-                "rust_target": "mips-unknown-linux-gnu",
-                "sdk": "ath79-generic",
-                "openwrt_version": "24.10.1",
-                "compression": "upx-ultra-brute"
               }
             ]
           }
@@ -228,6 +155,7 @@ jobs:
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           . "$HOME/.cargo/env"
+          rustup default nightly
           rustup target add ${{ matrix.rust_target }}
 
       - name: Install UPX
