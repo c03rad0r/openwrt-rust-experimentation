@@ -80,3 +80,72 @@ The steps are generally as follows:
 5.  **Acceptance and Maintenance:** If your package is accepted, it will be merged into the official feed. From that point on, it will be available to all OpenWrt users. You will generally be considered the maintainer and will be expected to fix bugs and keep the package updated over time.
 
 In summary, **custom feeds** are for your own use, giving you full control. Submitting to the **official feeds** is a contribution to the community that requires meeting high standards and a commitment to long-term maintenance.
+
+### 4. Advanced Feeds: Managing Multiple Packages and Repositories
+
+Let's address your specific scenario: you have two separate packages, `tollgate-wrt` and `tollgate-cli`, each in its own source code repository. You want to manage them in a custom feed.
+
+**1. The Feed Repository is Separate**
+
+Yes, your `my-custom-feed` repository would be a **third** repository, completely separate from your source code repositories. This feed repository does **not** contain the source code for your applications. It only contains the "recipes" (the `Makefile`s) that tell the OpenWrt build system *where to find* the source code and *how to build it*.
+
+**2. Feed Structure for Multiple Packages**
+
+Your `my-custom-feed` repository would contain a top-level directory for each package you want to manage. The structure would look like this:
+
+```
+my-custom-feed/
+├── tollgate-cli/
+│   └── Makefile
+└── tollgate-wrt/
+    └── Makefile
+```
+
+As you can see, there is no `src` directory here. The source code lives in its own dedicated Git repository.
+
+**3. Linking the Recipe to the Source Code**
+
+The magic happens inside each `Makefile`. The `Makefile` for `tollgate-wrt` would tell the build system to fetch its source from the `tollgate-wrt` Git repository.
+
+Here is a simplified example of what `my-custom-feed/tollgate-wrt/Makefile` might look like:
+
+```makefile
+include $(TOPDIR)/rules.mk
+
+PKG_NAME:=tollgate-wrt
+PKG_VERSION:=1.0.0
+
+# This is the crucial part!
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=https://github.com/your-username/tollgate-wrt.git
+PKG_SOURCE_VERSION:=v1.0.0 # A specific commit hash or tag
+
+include $(INCLUDE_DIR)/package.mk
+
+define Package/tollgate-wrt
+  # ... package metadata
+endef
+
+define Build/Compile
+  # ... build instructions
+endef
+
+# ... etc
+```
+
+*   `PKG_SOURCE_URL`: Points to the source code repository.
+*   `PKG_SOURCE_VERSION`: "Pins" the recipe to a specific Git commit hash or tag. This ensures that your builds are reproducible.
+
+**4. The Update Workflow**
+
+This is the most important concept to grasp. Here is the workflow when you update your application's source code:
+
+1.  **Update Application Code:** You make changes to your `tollgate-wrt` application and push a new commit or tag (e.g., `v1.0.1`) to its own Git repository.
+
+2.  **Update the Feed Recipe:** The OpenWrt build system knows nothing about this change yet. You must now go into your `my-custom-feed` repository and edit the `tollgate-wrt/Makefile`. You will update the `PKG_SOURCE_VERSION` to point to the new commit hash or tag (`v1.0.1`).
+
+3.  **Commit and Push the Feed:** You commit this small change to the `Makefile` and push it to your `my-custom-feed` repository.
+
+4.  **Trigger the Build:** The next time your CI workflow runs `./scripts/feeds update -a`, it will pull the updated `Makefile` from your custom feed. When the build system processes this updated recipe, it will see the new `PKG_SOURCE_VERSION` and will automatically fetch the new version of your application's source code before compiling it.
+
+This workflow is powerful because it decouples your application development from the OpenWrt packaging. You can have many commits to your application, but the OpenWrt build will only ever use the specific version you have "pinned" in your feed repository's `Makefile`.
