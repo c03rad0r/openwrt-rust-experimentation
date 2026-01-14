@@ -163,6 +163,12 @@ jobs:
         run: |
           apt-get install -y upx-ucl
 
+      - name: Update and Install Feeds
+        run: |
+          cd /builder
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
       - name: Configure SDK
         run: |
           cd /builder
