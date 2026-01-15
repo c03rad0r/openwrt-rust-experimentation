@@ -13,8 +13,7 @@ This document outlines the design and implementation plan for transitioning our 
 The solution is divided into three main phases:
 
 1.  **Create a Custom Docker Image:** A `Dockerfile` will be created to define a "pre-warmed" build environment.
-2.  **Automate Image Publication:** A new GitHub Actions workflow will be created to automatically build this Docker image and publish it to a container registry.
-3.  **Update the Main Build Workflow:** The existing `build-package.yml` workflow will be updated to use this new custom image, removing now-redundant setup steps.
+2.  **Unify the Build Workflow:** The image building and package building logic will be combined into a single, unified workflow. This creates an explicit dependency chain, ensuring the builder images are always created before the package build begins, which solves any potential race conditions or dependency errors.
 
 ---
 
@@ -74,52 +73,29 @@ RUN make defconfig
 RUN make toolchain/install -j$(nproc)
 ```
 
-### Phase 2: Automate Building and Pushing the Image
+### Phase 2: Unify the Build Workflow
 
-A new GitHub Actions workflow will be created at `.github/workflows/publish-builder-image.yml`.
+The image building and package building logic will be combined into a single workflow file at `.github/workflows/build-package.yml`. This creates an explicit dependency chain.
 
-**`.github/workflows/publish-builder-image.yml`:**
+**`.github/workflows/build-package.yml` (Key Changes):**
 
 ```yaml
-name: Publish Custom Builder Image
-
-on:
-  # Trigger manually from the Actions tab
-  workflow_dispatch:
-  # Trigger automatically when the Dockerfile changes
-  push:
-    paths:
-      - '.docker/Dockerfile'
-
 jobs:
-  build-and-publish:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write # Required to push to GitHub Container Registry
+  build-builder-images:
+    # ... (This new job runs first)
+    # It uses a matrix to build and push a pre-warmed
+    # Docker image for each target architecture.
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .docker
-          push: true
-          tags: ghcr.io/${{ github.repository }}/openwrt-rust-builder:latest
+  build-package:
+    # This job now depends on the successful completion
+    # of the image building job.
+    needs: [..., build-builder-images]
+    container:
+      # It dynamically selects the correct, pre-built
+      # image for its architecture.
+      image: ghcr.io/${{ github.repository }}/openwrt-rust-builder:${{ matrix.architecture }}
+    # ... (The rest of the job is streamlined)
 ```
-
-### Phase 3: Update the Main Build Workflow
-
-The existing `.github/workflows/build-package.yml` file will be modified to use the new image and remove the redundant steps.
 
 **`.github/workflows/build-package.yml` (Key Changes):**
 
@@ -169,8 +145,9 @@ The existing `.github/workflows/build-package.yml` file will be modified to use 
 
 ## 4. Local Development Workflow
 
-With this new architecture, the local development workflow using `act` becomes much simpler and faster:
+With the unified workflow, the local development experience using `act` is seamless and mirrors the CI environment:
 
-1.  **Prerequisite:** The `publish-builder-image.yml` workflow must have been run at least once to build and publish the pre-warmed image to the GitHub Container Registry.
-2.  **Initial Setup:** A developer runs `docker pull ghcr.io/OWNER/REPO/openwrt-rust-builder:latest` to download the pre-warmed image to their local machine.
-3.  **Running Builds:** The developer can now run `act` as usual. `act` will detect and use the locally available custom image, resulting in build times that are nearly identical to the fast, cached runs on GitHub Actions.
+1.  A developer runs the `act` command to trigger the `build-package` workflow locally.
+2.  The `build-builder-images` job will run first, automatically building the required pre-warmed Docker image on the developer's machine. This will be slow on the first run for each architecture.
+3.  Once the local builder image is created, the `build-package` job will run, using the locally built image.
+4.  Subsequent runs of `act` will be fast, as Docker will use the cached image layers from the initial build. This provides a consistent and efficient development loop.

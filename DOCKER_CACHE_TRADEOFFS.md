@@ -6,7 +6,7 @@ This document outlines the tradeoffs between two different caching strategies fo
 
 ## 1. File-Based Caching (`actions/cache`)
 
-This is the strategy currently implemented in our `.github/workflows/build-package.yml` workflow.
+This is the strategy that was previously implemented in our `.github/workflows/build-package.yml` workflow.
 
 -   **How it Works:** This method saves specific directories from within the build container (`/builder/staging_dir`, `/builder/build_dir`, `/builder/dl`) to GitHub's dedicated cache storage at the end of a successful job. On subsequent runs, it downloads and extracts this cache into a fresh `openwrt/sdk` container before the build steps begin.
 
@@ -50,5 +50,5 @@ This strategy involves creating a custom, "pre-warmed" Docker image that already
 | **Consistency**          | Low (local vs. remote)               | High (consistent everywhere)          |
 | **Maintenance**          | Low                                  | Medium                                |
 
--   **Current Approach (`actions/cache`):** This is an excellent starting point and effectively solves the immediate performance bottleneck on GitHub Actions.
--   **Future Improvement (Docker Registry):** Migrating to an image-based caching approach is the recommended next step if you require fast, consistent builds across both GitHub Actions and local development environments. It is a more robust and scalable long-term solution.
+-   **Previous Approach (`actions/cache`):** This was an excellent starting point and effectively solved the immediate performance bottleneck on GitHub Actions.
+-   **Current Approach (Docker Registry):** Migrating to an image-based caching approach is the recommended solution as it provides a more robust, scalable, and consistent build environment for both remote CI and local development.
