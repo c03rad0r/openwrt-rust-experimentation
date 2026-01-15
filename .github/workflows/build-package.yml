@@ -169,20 +169,23 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
+      - name: Force Disable LLVM CI Download
+        run: |
+          sed -i 's/--set=llvm.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/g' /builder/feeds/packages/lang/rust/Makefile
+
       - name: Configure SDK
         run: |
           cd /builder
-          # Generate default configuration
-          make defconfig
-          # Update configuration for our needs
-          echo "CONFIG_PACKAGE_${{ env.PACKAGE_NAME }}=y" >> .config
-          # Make dependencies available to opkg
-          echo "CONFIG_PACKAGE_nodogsplash=y" >> .config
-          echo "CONFIG_PACKAGE_luci=y" >> .config
-          echo "CONFIG_PACKAGE_jq=y" >> .config
-          # Disable downloading of pre-compiled LLVM to avoid 404 errors
-          echo "CONFIG_RUST_DOWNLOAD_CI_LLVM=n" >> .config
-          # Regenerate the config to apply the changes
+          # Create a custom config seed with all our desired options
+          cat > custom.config <<EOF
+          CONFIG_PACKAGE_${{ env.PACKAGE_NAME }}=y
+          CONFIG_PACKAGE_nodogsplash=y
+          CONFIG_PACKAGE_luci=y
+          CONFIG_PACKAGE_jq=y
+          CONFIG_RUST_DOWNLOAD_CI_LLVM=n
+          EOF
+          # Copy our seed to .config and generate the final build config
+          cp custom.config .config
           make defconfig
 
       - name: Compile Package
