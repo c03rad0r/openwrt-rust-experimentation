@@ -138,6 +138,8 @@ jobs:
           fetch-depth: 0
 
       - name: Cache OpenWrt build directories
+        # This cache is specific to GitHub Actions and will not work with local `act` runners.
+        # It significantly speeds up builds by caching the compiled toolchain and other build artifacts.
         uses: actions/cache@v4
         id: build-cache
         with:
