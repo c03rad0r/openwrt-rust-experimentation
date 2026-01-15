@@ -1,0 +1,49 @@
+name: Publish Custom Builder Image
+
+on:
+  # Trigger manually from the Actions tab
+  workflow_dispatch:
+  # Trigger automatically when the Dockerfile changes
+  push:
+    paths:
+      - '.docker/Dockerfile'
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - architecture: "aarch64_cortex-a53"
+            rust_target: "aarch64-unknown-linux-gnu"
+            sdk: "mediatek-filogic"
+            openwrt_version: "24.10.1"
+          - architecture: "mips_24kc"
+            rust_target: "mips-unknown-linux-musl"
+            sdk: "ath79-generic"
+            openwrt_version: "24.10.1"
+
+    permissions:
+      contents: read
+      packages: write # Required to push to GitHub Container Registry
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .docker
+          push: true
+          build-args: |
+            SDK_TAG=${{ matrix.sdk }}-${{ matrix.openwrt_version }}
+            RUST_TARGET=${{ matrix.rust_target }}
+          tags: ghcr.io/${{ github.repository }}/openwrt-rust-builder:${{ matrix.architecture }}

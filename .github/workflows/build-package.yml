@@ -27,16 +27,17 @@ jobs:
           {
             "include": [
               {
-                "architecture": "aarch64_cortex-a53",
-                "rust_target": "aarch64-unknown-linux-gnu",
-                "sdk": "mediatek-filogic",
-                "openwrt_version": "24.10.1"
+                "architecture": "aarch64_cortex-a53"
               },
               {
                 "architecture": "aarch64_cortex-a53",
-                "rust_target": "aarch64-unknown-linux-gnu",
-                "sdk": "mediatek-filogic",
-                "openwrt_version": "24.10.1",
+                "compression": "upx-ultra-brute"
+              },
+              {
+                "architecture": "mips_24kc"
+              },
+              {
+                "architecture": "mips_24kc",
                 "compression": "upx-ultra-brute"
               }
             ]
@@ -125,7 +126,7 @@ jobs:
     needs: [determine-versioning, define-matrix]
     runs-on: ubuntu-latest
     container:
-      image: openwrt/sdk:${{ matrix.sdk }}-${{ matrix.openwrt_version }}
+      image: ghcr.io/${{ github.repository }}/openwrt-rust-builder:${{ matrix.architecture }}
       options: --user root
       volumes:
         - /tmp/tollgate-artifacts:/artifacts
@@ -136,20 +137,6 @@ jobs:
         with:
           path: ${{ env.PACKAGE_NAME }}/
           fetch-depth: 0
-
-      - name: Cache OpenWrt build directories
-        # This cache is specific to GitHub Actions and will not work with local `act` runners.
-        # It significantly speeds up builds by caching the compiled toolchain and other build artifacts.
-        uses: actions/cache@v4
-        id: build-cache
-        with:
-          path: |
-            /builder/staging_dir
-            /builder/build_dir
-            /builder/dl
-          key: openwrt-build-cache-${{ matrix.architecture }}-${{ matrix.sdk }}-${{ matrix.openwrt_version }}
-          restore-keys: |
-            openwrt-build-cache-${{ matrix.architecture }}-${{ matrix.sdk }}-
 
       - name: Initialize
         run: |
@@ -165,41 +152,16 @@ jobs:
           # Move sources to sdk folder
           mv ${{ env.PACKAGE_NAME }} /builder/package/${{ env.PACKAGE_NAME }}
 
-      - name: Install Rust
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          . "$HOME/.cargo/env"
-          rustup default nightly
-          rustup target add ${{ matrix.rust_target }}
-
       - name: Install UPX
         if: contains(matrix.compression, 'upx')
         run: |
           apt-get install -y upx-ucl
 
-      - name: Update and Install Feeds
+      - name: Configure SDK for Package
         run: |
           cd /builder
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
-
-      - name: Force Disable LLVM CI Download
-        run: |
-          sed -i 's/--set=llvm.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/g' /builder/feeds/packages/lang/rust/Makefile
-
-      - name: Configure SDK
-        run: |
-          cd /builder
-          # Create a custom config seed with all our desired options
-          cat > custom.config <<EOF
-          CONFIG_PACKAGE_${{ env.PACKAGE_NAME }}=y
-          CONFIG_PACKAGE_nodogsplash=y
-          CONFIG_PACKAGE_luci=y
-          CONFIG_PACKAGE_jq=y
-          CONFIG_RUST_DOWNLOAD_CI_LLVM=n
-          EOF
-          # Copy our seed to .config and generate the final build config
-          cp custom.config .config
+          # The toolchain is already built. We just need to select our package.
+          echo "CONFIG_PACKAGE_${{ env.PACKAGE_NAME }}=y" >> .config
           make defconfig
 
       - name: Compile Package
@@ -216,8 +178,7 @@ jobs:
             export USE_UPX=0
           fi
           
-          env RUST_TARGET=${{ matrix.rust_target }} \
-            PACKAGE_VERSION=${{ needs.determine-versioning.outputs.package_version }} \
+          env PACKAGE_VERSION=${{ needs.determine-versioning.outputs.package_version }} \
             USE_UPX=$USE_UPX \
             UPX_FLAGS="$UPX_FLAGS" \
             make -j$(nproc) ${{ env.DEBUG == 'true' && 'V=sc' || '' }} package/${{ env.PACKAGE_NAME }}/compile

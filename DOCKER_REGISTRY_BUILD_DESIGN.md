@@ -18,6 +18,18 @@ The solution is divided into three main phases:
 
 ---
 
+## 2.1. Separation of Concerns: "Factory" vs. "Assembly Line"
+
+This new architecture creates a clear separation of concerns between building the development environment and building the package itself.
+
+*   **The "Factory" (`publish-builder-image.yml`):** This workflow is responsible for the slow, complex, and infrequent task of building the entire cross-compilation toolchain. It takes the `sdk`, `openwrt_version`, and `rust_target` as parameters to produce a "pre-warmed" Docker image for a specific architecture. This is the only place where these details are needed.
+
+*   **The "Assembly Line" (`build-package.yml`):** This is the main workflow, and its job is now much simpler. It acts as an assembly line, taking the pre-built environment (the Docker image) and simply running the package compilation inside it. Because the environment is already fully configured, this workflow no longer needs to know the specifics of the SDK version or Rust target. It only needs the `architecture` to select the correct pre-built image and to name the final package.
+
+This separation is why it is correct to remove the `sdk`, `openwrt_version`, and `rust_target` variables from the matrix in the `build-package.yml` workflow. Their responsibility has been moved to the "factory" workflow.
+
+---
+
 ## 3. Implementation Plan
 
 ### Phase 1: Create the Custom Dockerfile
