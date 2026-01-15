@@ -137,6 +137,18 @@ jobs:
           path: ${{ env.PACKAGE_NAME }}/
           fetch-depth: 0
 
+      - name: Cache OpenWrt build directories
+        uses: actions/cache@v4
+        id: build-cache
+        with:
+          path: |
+            /builder/staging_dir
+            /builder/build_dir
+            /builder/dl
+          key: openwrt-build-cache-${{ matrix.architecture }}-${{ matrix.sdk }}-${{ matrix.openwrt_version }}
+          restore-keys: |
+            openwrt-build-cache-${{ matrix.architecture }}-${{ matrix.sdk }}-
+
       - name: Initialize
         run: |
           # Add compression suffix if using compression
