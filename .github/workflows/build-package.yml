@@ -27,17 +27,29 @@ jobs:
           {
             "include": [
               {
-                "architecture": "aarch64_cortex-a53"
+                "architecture": "aarch64_cortex-a53",
+                "sdk": "mediatek-filogic",
+                "openwrt_version": "24.10.1",
+                "rust_target": "aarch64-unknown-linux-gnu"
               },
               {
                 "architecture": "aarch64_cortex-a53",
+                "sdk": "mediatek-filogic",
+                "openwrt_version": "24.10.1",
+                "rust_target": "aarch64-unknown-linux-gnu",
                 "compression": "upx-ultra-brute"
               },
               {
-                "architecture": "mips_24kc"
+                "architecture": "mips_24kc",
+                "sdk": "ath79-generic",
+                "openwrt_version": "24.10.1",
+                "rust_target": "mips-unknown-linux-musl"
               },
               {
                 "architecture": "mips_24kc",
+                "sdk": "ath79-generic",
+                "openwrt_version": "24.10.1",
+                "rust_target": "mips-unknown-linux-musl",
                 "compression": "upx-ultra-brute"
               }
             ]

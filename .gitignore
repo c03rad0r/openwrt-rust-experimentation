@@ -1,20 +1,23 @@
-# OpenWrt build artifacts
-/bin/
+# OpenWRT build artifacts
 /build_dir/
-/dl/
-/logs/
+/bin/
 /staging_dir/
+/logs/
 /tmp/
-/.config
-/.config.old
-/feeds/
+*.ipk
 
 # Go build artifacts
-/tollgate-wrt
-/src/cmd/tollgate-cli/tollgate
+tollgate-wrt
+src/cmd/tollgate-cli/tollgate
 
-# GitHub Actions artifacts
-/artifacts/
-/event.json
-/event.err
-/matrix.json
+# CI temporary files
+artifacts/
+event.json
+event.err
+matrix.json
+
+# OS / Editor specific
+.DS_Store
+*.swo
+*.swp
+*.swn
