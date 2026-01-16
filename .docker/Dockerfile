@@ -9,14 +9,15 @@ FROM openwrt/sdk:${SDK_TAG}
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install Rust and essential build tools
+USER root
+
 RUN apt-get update && apt-get install -y curl build-essential && \
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
+    . "$HOME/.cargo/env" && \
+    rustup target add ${RUST_TARGET}
 
-# Add Rust to the PATH
+# Add Rust to the PATH for subsequent layers
 ENV PATH="/root/.cargo/bin:${PATH}"
-
-# Install the cross-compilation target for the specific architecture
-RUN rustup target add ${RUST_TARGET}
 
 # The following steps will be executed within the container at build time
 # to "pre-warm" the image.
