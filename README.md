@@ -142,6 +142,18 @@ For more detailed information about TollGate modules and usage:
 	- [LLDD](src/janitor/LLDD.md)
 
 You can find the [Module Integration Guide](src/integrating_modules.md) here.
+## Local Development
+
+To build the package locally, you can use `act`, a local runner for GitHub Actions. However, you may encounter a "permission denied" error when `act` tries to connect to the Docker daemon. This is usually because your user session has not been updated with the correct group permissions.
+
+To work around this for a single session, you can run the build using the following command:
+
+```bash
+sg docker -c "act"
+```
+
+For a permanent fix, please refer to the detailed instructions in the [Local Development Guide](LOCAL_DEVELOPMENT.md).
+
 ## License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.

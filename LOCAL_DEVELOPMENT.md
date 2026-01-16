@@ -64,7 +64,41 @@ act --secret-file .secrets
 
 The compiled `.ipk` packages will be placed in an `artifacts` directory at the root of the project. `act` automatically creates this directory to store the outputs from the workflow.
 
-## 5. How the "act-aware" Workflow Works
+## 5. Troubleshooting
+
+### "Permission Denied" Connecting to Docker
+
+You may encounter an error message similar to this when running `act`:
+
+```
+Error: permission denied while trying to connect to the Docker daemon socket...
+```
+
+This happens when your user account does not have the necessary permissions to access the Docker socket (`/var/run/docker.sock`).
+
+#### Permanent Fix (Recommended)
+
+The best way to resolve this is to add your user to the `docker` group. This will grant you the required permissions permanently.
+
+1.  **Add your user to the `docker` group:**
+
+    ```bash
+    sudo usermod -aG docker $USER
+    ```
+
+2.  **Apply the new group membership:** For the changes to take effect, you must either **log out and log back in**, or **reboot your machine**. Simply opening a new terminal is often not sufficient.
+
+#### Temporary Workaround
+
+If you cannot log out or reboot, you can use the `sg` command to run `act` with the `docker` group's permissions for a single session. This is a temporary fix.
+
+```bash
+sg docker -c "act"
+```
+
+This command executes `act` as if you were a member of the `docker` group, but only for that one command.
+
+## 6. How the "act-aware" Workflow Works
 
 The `build-package.yml` workflow has been specifically modified to work seamlessly with `act`.
 
