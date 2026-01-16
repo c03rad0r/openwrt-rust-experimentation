@@ -5,6 +5,8 @@ ARG RUST_TARGET
 
 FROM openwrt/sdk:${SDK_TAG}
 
+ARG RUST_TARGET
+
 # Set environment variables to avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -38,4 +40,4 @@ RUN make defconfig && \
 # 4. Pre-compile the toolchain
 # This is the most important step. It will trigger the lengthy compilation
 # of the Rust toolchain and LLVM, saving the result into a layer of this Docker image.
-RUN make toolchain/install -j$(nproc)
+RUN make toolchain/install -j1 V=sc
