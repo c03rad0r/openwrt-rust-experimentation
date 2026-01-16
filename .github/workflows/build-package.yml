@@ -155,7 +155,10 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .docker
-          push: true
+          # Only push the image when running on GitHub Actions (env.ACT is not 'true')
+          push: ${{ env.ACT != 'true' }}
+          # Load the image into the local Docker daemon when running with act
+          load: ${{ env.ACT == 'true' }}
           build-args: |
             SDK_TAG=${{ matrix.sdk }}-${{ matrix.openwrt_version }}
             RUST_TARGET=${{ matrix.rust_target }}
