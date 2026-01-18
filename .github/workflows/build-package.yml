@@ -8,6 +8,7 @@ on:
 env:
   PACKAGE_NAME: "tollgate-wrt"
   DEBUG: "true"
+  BUILDER_IMAGE_NAME: "openwrt-rust-builder"
 
 # Define the architecture matrix once for reuse across jobs
 # This allows us to maintain architecture configurations in one place
@@ -175,13 +176,15 @@ jobs:
           build-args: |
             SDK_TAG=${{ matrix.sdk }}-${{ matrix.openwrt_version }}
             RUST_TARGET=${{ matrix.rust_target }}
-          tags: ghcr.io/${{ github.repository }}/openwrt-rust-builder:${{ matrix.architecture }}
+          tags: >
+            ${{ env.ACT == 'true' && format('{0}:{1}', env.BUILDER_IMAGE_NAME, matrix.architecture) || format('ghcr.io/{0}/{1}:{2}', github.repository, env.BUILDER_IMAGE_NAME, matrix.architecture) }}
 
   build-package:
     needs: [determine-versioning, define-matrix, build-builder-images]
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository }}/openwrt-rust-builder:${{ matrix.architecture }}
+      image: >
+        ${{ env.ACT == 'true' && format('{0}:{1}', env.BUILDER_IMAGE_NAME, matrix.architecture) || format('ghcr.io/{0}/{1}:{2}', github.repository, env.BUILDER_IMAGE_NAME, matrix.architecture) }}
       options: --user root
       volumes:
         - /tmp/tollgate-artifacts:/artifacts
