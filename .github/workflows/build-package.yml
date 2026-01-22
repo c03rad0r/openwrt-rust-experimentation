@@ -135,138 +135,102 @@ jobs:
             echo "release_channel=dev" >> $GITHUB_OUTPUT
           fi
 
-  build-builder-images:
+  build-and-package:
     runs-on: ubuntu-latest
+    needs: [determine-versioning, define-matrix]
     strategy:
-      matrix:
-        include:
-          - architecture: "aarch64_cortex-a53"
-            rust_target: "aarch64-unknown-linux-gnu"
-            sdk: "mediatek-filogic"
-            openwrt_version: "24.10.1"
-          - architecture: "mips_24kc"
-            rust_target: "mips-unknown-linux-musl"
-            sdk: "ath79-generic"
-            openwrt_version: "24.10.1"
-
-    permissions:
-      contents: read
-      packages: write # Required to push to GitHub Container Registry
-
+      matrix: ${{ fromJson(needs.define-matrix.outputs.matrix) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Log in to GitHub Container Registry
-        if: ${{ env.ACT != 'true' }} # Only run when not in act
+        if: ${{ env.ACT != 'true' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build Docker image
+        id: build_image
         uses: docker/build-push-action@v5
         with:
           context: .docker
-          # Only push the image when running on GitHub Actions (env.ACT is not 'true')
           push: ${{ env.ACT != 'true' }}
-          # Load the image into the local Docker daemon when running with act
-          load: ${{ env.ACT == 'true' }}
+          load: true
+          tags: ${{ env.ACT == 'true' && format('openwrt-rust-builder:{0}', matrix.architecture) || format('ghcr.io/{0}/openwrt-rust-builder:{1}', github.repository, matrix.architecture) }}
           build-args: |
             SDK_TAG=${{ matrix.sdk }}-${{ matrix.openwrt_version }}
             RUST_TARGET=${{ matrix.rust_target }}
-          tags: >
-            ${{ env.ACT == 'true' && format('{0}:{1}', env.BUILDER_IMAGE_NAME, matrix.architecture) || format('ghcr.io/{0}/{1}:{2}', github.repository, env.BUILDER_IMAGE_NAME, matrix.architecture) }}
 
-  build-package:
-    needs: [determine-versioning, define-matrix, build-builder-images]
-    runs-on: ubuntu-latest
-    container:
-      image: >
-        ${{ env.ACT == 'true' && format('{0}:{1}', env.BUILDER_IMAGE_NAME, matrix.architecture) || format('ghcr.io/{0}/{1}:{2}', github.repository, env.BUILDER_IMAGE_NAME, matrix.architecture) }}
-      options: --user root
-      volumes:
-        - /tmp/tollgate-artifacts:/artifacts
-    strategy:
-      matrix: ${{ fromJson(needs.define-matrix.outputs.matrix) }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          path: ${{ env.PACKAGE_NAME }}/
-          fetch-depth: 0
-
-      - name: Initialize
+      - name: Run Package Compilation in Docker
         run: |
-          # Add compression suffix if using compression
-          if [ -n "${{ matrix.compression }}" ]; then
-            COMPRESSION_SUFFIX="-${{ matrix.compression }}"
-          else
-            COMPRESSION_SUFFIX=""
-          fi
-          PACKAGE_FILENAME=${{ env.PACKAGE_NAME }}_${{ needs.determine-versioning.outputs.package_version }}_${{ matrix.architecture }}${COMPRESSION_SUFFIX}.ipk
-          echo "PACKAGE_FILENAME=$PACKAGE_FILENAME" >> $GITHUB_ENV
+          IMAGE_TAG=${{ env.ACT == 'true' && format('openwrt-rust-builder:{0}', matrix.architecture) || format('ghcr.io/{0}/openwrt-rust-builder:{1}', github.repository, matrix.architecture) }}
+          docker run --rm --user root \
+            -v "/tmp/tollgate-artifacts:/artifacts" \
+            -v "${PWD}:/work" \
+            -e PACKAGE_NAME="${{ env.PACKAGE_NAME }}" \
+            -e PACKAGE_VERSION="${{ needs.determine-versioning.outputs.package_version }}" \
+            -e DEBUG="${{ env.DEBUG }}" \
+            -e COMPRESSION="${{ matrix.compression }}" \
+            -e ARCHITECTURE="${{ matrix.architecture }}" \
+            "$IMAGE_TAG" \
+            bash -c '
+              set -e
+              echo "--- Starting package build ---"
 
-          # Move sources to sdk folder
-          mv ${{ env.PACKAGE_NAME }} /builder/package/${{ env.PACKAGE_NAME }}
+              # Prepare environment
+              if [ -n "$COMPRESSION" ]; then
+                COMPRESSION_SUFFIX="-$COMPRESSION"
+              else
+                COMPRESSION_SUFFIX=""
+              fi
+              PACKAGE_FILENAME="${PACKAGE_NAME}_${PACKAGE_VERSION}_${ARCHITECTURE}${COMPRESSION_SUFFIX}.ipk"
+              echo "Package filename will be: $PACKAGE_FILENAME"
 
-      - name: Install UPX
-        if: contains(matrix.compression, 'upx')
-        run: |
-          apt-get install -y upx-ucl
+              # Move sources to the correct location in the SDK
+              echo "Moving source code..."
+              mkdir -p /builder/package/"$PACKAGE_NAME"
+              cp -r /work/* /builder/package/"$PACKAGE_NAME"/
 
-      - name: Configure SDK for Package
-        run: |
-          cd /builder
-          # The toolchain is already built. We just need to select our package.
-          echo "CONFIG_PACKAGE_${{ env.PACKAGE_NAME }}=y" >> .config
-          make defconfig
+              # Configure SDK
+              echo "Configuring SDK..."
+              cd /builder
+              echo "CONFIG_PACKAGE_${PACKAGE_NAME}=y" >> .config
+              make defconfig > /dev/null
 
-      - name: Compile Package
-        shell: bash
-        run: |
-          cd /builder
-          
-          # Set UPX flags from compression type (e.g., upx-fast -> --fast)
-          if [ -n "${{ matrix.compression }}" ]; then
-            export USE_UPX=1
-            COMP="${{ matrix.compression }}"
-            export UPX_FLAGS="--${COMP#upx-}"
-          else
-            export USE_UPX=0
-          fi
-          
-          env PACKAGE_VERSION=${{ needs.determine-versioning.outputs.package_version }} \
-            USE_UPX=$USE_UPX \
-            UPX_FLAGS="$UPX_FLAGS" \
-            make -j$(nproc) ${{ env.DEBUG == 'true' && 'V=sc' || '' }} package/${{ env.PACKAGE_NAME }}/compile
+              # Compile
+              echo "Compiling package..."
+              if [ -n "$COMPRESSION" ]; then
+                export USE_UPX=1
+                COMP="$COMPRESSION"
+                export UPX_FLAGS="--${COMP#upx-}"
+                echo "UPX compression enabled with flags: $UPX_FLAGS"
+              else
+                export USE_UPX=0
+              fi
 
-      - name: List output package(s)
-        run: |
-          find /builder/bin/packages -name "*.ipk" -type f
-          PACKAGE_PATH=$(find /builder/bin/packages -name "*.ipk" -type f | head -n1)
-          if [ -z "$PACKAGE_PATH" ]; then
-            echo "No .ipk package found"
-            exit 1
-          fi
-          ls -lh "$PACKAGE_PATH"
-          # Copy to mounted volume that persists outside container
-          mkdir -p /artifacts
-          cp "$PACKAGE_PATH" "/artifacts/${{ env.PACKAGE_FILENAME }}"
-          # Also copy to GitHub workspace for artifact upload
-          mkdir -p /github/workspace/artifacts
-          cp "$PACKAGE_PATH" "/github/workspace/artifacts/${{ env.PACKAGE_FILENAME }}"
+              make -j$(nproc) package/$PACKAGE_NAME/compile
 
-      - name: GitHub Artifact upload
-        if: ${{ env.ACT != 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.PACKAGE_FILENAME }}
-          path: /github/workspace/artifacts/${{ env.PACKAGE_FILENAME }}
-          retention-days: 5
+              # Copy artifacts
+              echo "Copying artifacts..."
+              PACKAGE_PATH=$(find /builder/bin/packages -name "*.ipk" -type f | head -n1)
+              if [ -z "$PACKAGE_PATH" ]; then
+                echo "!!! No .ipk package found!"
+                exit 1
+              fi
+              echo "Found package at: $PACKAGE_PATH"
+              ls -lh "$PACKAGE_PATH"
+              
+              mkdir -p /artifacts
+              cp "$PACKAGE_PATH" "/artifacts/$PACKAGE_FILENAME"
+              
+              echo "--- Package build finished ---"
+            '
 
   publish-metadata:
-    needs: [determine-versioning, build-package, define-matrix]
+    needs: [determine-versioning, build-and-package, define-matrix]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     container:
