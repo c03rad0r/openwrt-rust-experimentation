@@ -47,4 +47,4 @@ RUN make defconfig V=s && \
 # 5. Pre-compile the toolchain
 # This is the most important step. It will trigger the lengthy compilation
 # of the Rust toolchain and LLVM, saving the result into a layer of this Docker image.
-RUN make package/rust/compile -j1 V=s
+RUN make package/rust/compile -j$(nproc) V=s
