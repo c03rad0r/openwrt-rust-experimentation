@@ -28,14 +28,23 @@ WORKDIR /builder
 RUN ./scripts/feeds update -a && \
     ./scripts/feeds install -a
 
-# 2. Configure the SDK and Toolchain
+# 2. Copy source code
+COPY . /work
+
+# 3. Move sources to the correct location in the SDK
+RUN mkdir -p /builder/package/tollgate-wrt && \
+    cp -r /work/* /builder/package/tollgate-wrt/
+
+# 4. Configure the SDK and Toolchain
 # This creates a base .config file, explicitly sets our required toolchain option,
 # and includes a failsafe sed command to guarantee the LLVM download is disabled.
 RUN make defconfig V=s && \
     echo "CONFIG_RUST_DOWNLOAD_CI_LLVM=n" >> .config && \
+    echo "CONFIG_PACKAGE_tollgate-wrt=y" >> .config && \
+    make defconfig V=s && \
     sed -i 's/--set=llvm.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/g' /builder/feeds/packages/lang/rust/Makefile
 
-# 4. Pre-compile the toolchain
+# 5. Pre-compile the toolchain
 # This is the most important step. It will trigger the lengthy compilation
 # of the Rust toolchain and LLVM, saving the result into a layer of this Docker image.
 RUN make package/rust/compile -j1 V=s

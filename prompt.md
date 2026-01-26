@@ -23,3 +23,46 @@ The primary goal is to understand and optimize the build process for the `tollga
 1.  **Analyze `build.log`:** Once the current `act` run is complete, the first step will be to examine the contents of `/tmp/tollgate-artifacts/build.log`. This log will provide a detailed trace of the build process and should reveal why the Rust toolchain is being recompiled.
 2.  **Examine `.ipk` Artifact:** Check if an `.ipk` file was successfully generated in `/tmp/tollgate-artifacts`.
 3.  **Further Optimization:** Based on the analysis of the `build.log`, we will determine the root cause of the recompilation and implement further optimizations to the `Dockerfile` or the `build-package.yml` workflow to ensure the pre-built toolchain is always used as intended.
+
+## Implemented Strategy: Hybrid Build Approach
+
+After further discussion, we have implemented a hybrid build strategy to optimize for both build speed and development flexibility. This approach is designed to prevent the recompilation of the Rust toolchain on every run.
+
+*   **The `Dockerfile` is now specialized:**
+    *   It now copies the `tollgate-wrt` source code into the image.
+    *   It configures the OpenWrt SDK for the `tollgate-wrt` package during the image build.
+    *   It pre-compiles the Rust toolchain with full knowledge of the `tollgate-wrt` project's dependencies.
+
+*   **The `build-package.yml` workflow now uses a volume mount:**
+    *   The `docker run` command now includes the flag `-v "${PWD}:/builder/package/tollgate-wrt"`.
+    *   This mounts the local, up-to-date source code from the developer's machine over the top of the "snapshot" version that was copied into the image.
+
+*   **The Desired Outcome:** This setup should result in the best of both worlds:
+    1.  The Docker image contains a pre-built, compatible toolchain, which should prevent lengthy recompilations.
+    2.  Developers can still iterate on their code locally, and the build will always use the latest version of the source code.
+
+## Next Steps
+
+1.  **Abort the Current Build:** The currently running `act` command is using the old Docker image and workflow. It must be stopped.
+2.  **Delete Old Docker Images:** To ensure a clean rebuild with the new `Dockerfile`, the old `openwrt-rust-builder` images must be deleted. This can be done with the following commands:
+    ```bash
+    docker rmi openwrt-rust-builder:aarch64_cortex-a53
+    docker rmi openwrt-rust-builder:mips_24kc
+    ```
+3.  **Run `act` Again:** After aborting the old build and deleting the old images, run the `act` command again:
+    ```bash
+    act -j build-and-package --container-architecture linux/amd64
+    ```
+4.  **Analyze the New Build:** This will trigger a new build using the updated `Dockerfile` and workflow. We will then analyze the output and the `build.log` to confirm that the toolchain is no longer being recompiled.
+
+## Key Insights and Hypotheses
+
+*   **The Core Problem:** The user has correctly identified that any cross-compilation that happens *inside* the `docker run` command (the "Run Package Compilation in Docker" step) is ephemeral and will be discarded when the container is destroyed. The goal is to have this compilation happen as part of the Docker image creation.
+
+*   **The `Dockerfile`'s Intent:** The `.docker/Dockerfile` is already designed to address this. The `RUN make toolchain/install -j$(nproc)` command is intended to compile the entire cross-compilation toolchain and "bake" it into a layer of the `openwrt-rust-builder` image.
+
+*   **Hypotheses for Recompilation:** The fact that the toolchain is being recompiled inside the container suggests one of the following:
+    1.  **Cache Invalidation:** The OpenWrt build system believes the pre-built toolchain in the Docker image is "stale." This could be due to file timestamps, a configuration mismatch between the `docker build` and `docker run` environments, or differing environment variables.
+    2.  **Incorrect `make` Target:** The `make toolchain/install` target might not be sufficient to pre-build all necessary components. There may be other `make` targets that need to be run in the `Dockerfile` to create a truly complete and portable toolchain.
+
+*   **Path to Resolution:** The verbose output from the `make -j1 V=s` command, which will be captured in `build.log`, is the key to solving this. It will show the exact commands being run and the `make` dependency-checking messages (e.g., "`prereq' is newer than `target'") that are triggering the recompilation. Based on this data, we can determine whether to modify the `Dockerfile`, adjust the `docker run` command, or take other corrective actions.

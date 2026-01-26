@@ -150,6 +150,7 @@ jobs:
           docker run --rm --user root \
             -v "/tmp/tollgate-artifacts:/artifacts" \
             -v "${PWD}:/work" \
+            -v "${PWD}:/builder/package/tollgate-wrt" \
             -e PACKAGE_NAME="${{ env.PACKAGE_NAME }}" \
             -e PACKAGE_VERSION="${{ needs.determine-versioning.outputs.package_version }}" \
             -e DEBUG="${{ env.DEBUG }}" \
@@ -171,16 +172,7 @@ jobs:
               PACKAGE_FILENAME="${PACKAGE_NAME}_${PACKAGE_VERSION}_${ARCHITECTURE}${COMPRESSION_SUFFIX}.ipk"
               echo "Package filename will be: $PACKAGE_FILENAME" | tee -a "$LOG_FILE"
 
-              # Move sources to the correct location in the SDK
-              echo "STEP: Moving source code" | tee -a "$LOG_FILE"
-              mkdir -p /builder/package/"$PACKAGE_NAME"
-              cp -r /work/* /builder/package/"$PACKAGE_NAME"/
-
-              # Configure SDK
-              echo "STEP: Configuring SDK" | tee -a "$LOG_FILE"
               cd /builder
-              echo "CONFIG_PACKAGE_${PACKAGE_NAME}=y" >> .config
-              make defconfig > /dev/null
 
               # Compile
               echo "STEP: Compiling package" | tee -a "$LOG_FILE"
