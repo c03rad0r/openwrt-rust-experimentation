@@ -26,7 +26,10 @@ This is the strategy that was previously implemented in our `.github/workflows/b
 
 This strategy involves creating a custom, "pre-warmed" Docker image that already contains the fully built toolchain and dependencies.
 
--   **How it Works:** You would create a `Dockerfile` that uses the `openwrt/sdk` image as a base. This `Dockerfile` would then contain all the steps needed to install the Rust toolchain and compile LLVM. The resulting image is then pushed to a Docker registry (like GitHub Container Registry or Docker Hub). The CI workflow would then use this custom image directly instead of the generic `openwrt/sdk` image.
+-   **How it Works:** You would create a `Dockerfile` that uses the `openwrt/sdk` image as a base. This `Dockerfile` would then contain all the steps needed to install the Rust toolchain and compile LLVM. The resulting image, named `openwrt-rust-builder`, is then pushed to a Docker registry (like GitHub Container Registry or Docker Hub) or stored in your local Docker daemon. The CI workflow would then use this custom image directly instead of the generic `openwrt/sdk` image.
+    *   You can check for the presence of these images locally using `sudo docker images`.
+    *   Images are tagged with the architecture (e.g., `openwrt-rust-builder:aarch64_cortex-a53`).
+    *   These images are fully built and ready for use once they appear in `docker images` output; they do not show up there while still being built.
 
 -   **Pros:**
     -   **Universal and Portable:** The pre-built image can be pulled and used by any container runtime, including GitHub Actions, local `act` runners, and developers' local machines. This creates a consistent and fast build environment for everyone.

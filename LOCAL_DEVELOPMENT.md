@@ -33,7 +33,7 @@ act
 
 ### What to Expect
 
-1.  **First Run (Slow):** The first time you run `act`, it will execute the `build-builder-images` job. This will build the "pre-warmed" Docker images for each architecture defined in the matrix, which involves the lengthy process of compiling the Rust toolchain and LLVM. This is a one-time cost for each architecture.
+1.  **First Run (Slow):** The first time you run `act`, it will execute the `build-builder-images` job. This will build the "pre-warmed" Docker images for each architecture defined in the matrix, which involves the lengthy process of compiling the Rust toolchain and LLVM. This is a one-time cost for each architecture. You can verify the presence of these images using `sudo docker images`.
 
 2.  **Subsequent Runs (Fast):** On all subsequent runs, Docker will use its cached layers, and the `build-builder-images` job will complete very quickly.
 

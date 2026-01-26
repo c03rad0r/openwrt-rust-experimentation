@@ -148,4 +148,12 @@ This is the most important concept to grasp. Here is the workflow when you updat
 
 4.  **Trigger the Build:** The next time your CI workflow runs `./scripts/feeds update -a`, it will pull the updated `Makefile` from your custom feed. When the build system processes this updated recipe, it will see the new `PKG_SOURCE_VERSION` and will automatically fetch the new version of your application's source code before compiling it.
 
+### Docker Image Management
+
+When working with Docker images in this context, especially during local development with `act`:
+
+*   You can list all locally available Docker images using `sudo docker images`.
+*   Images like `openwrt-rust-builder:aarch64_cortex-a53` are created during the `build-builder-images` job. These images are fully built and ready for use once they appear in the `docker images` output; they do not show up there while still being built.
+*   If an image for a specific architecture already exists, `act` will reuse it, significantly speeding up subsequent local builds.
+
 This workflow is powerful because it decouples your application development from the OpenWrt packaging. You can have many commits to your application, but the OpenWrt build will only ever use the specific version you have "pinned" in your feed repository's `Makefile`.

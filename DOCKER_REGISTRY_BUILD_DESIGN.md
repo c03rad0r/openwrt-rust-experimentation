@@ -148,6 +148,6 @@ jobs:
 With the unified workflow, the local development experience using `act` is seamless and mirrors the CI environment:
 
 1.  A developer runs the `act` command to trigger the `build-package` workflow locally.
-2.  The `build-builder-images` job will run first, automatically building the required pre-warmed Docker image on the developer's machine. This will be slow on the first run for each architecture.
+2.  The `build-builder-images` job will run first, automatically building the required pre-warmed Docker image on the developer's machine. This will be slow on the first run for each architecture. You can verify the presence of the built Docker images using `sudo docker images`.
 3.  Once the local builder image is created, the `build-package` job will run, using the locally built image.
 4.  Subsequent runs of `act` will be fast, as Docker will use the cached image layers from the initial build. This provides a consistent and efficient development loop.
