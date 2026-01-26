@@ -158,55 +158,58 @@ jobs:
             "$IMAGE_TAG" \
             bash -c '
               set -e
-              echo "--- Starting package build ---"
+              LOG_FILE="/artifacts/build.log"
+              echo "--- Starting package build ---" | tee -a "$LOG_FILE"
 
               # Prepare environment
+              echo "STEP: Preparing environment" | tee -a "$LOG_FILE"
               if [ -n "$COMPRESSION" ]; then
                 COMPRESSION_SUFFIX="-$COMPRESSION"
               else
                 COMPRESSION_SUFFIX=""
               fi
               PACKAGE_FILENAME="${PACKAGE_NAME}_${PACKAGE_VERSION}_${ARCHITECTURE}${COMPRESSION_SUFFIX}.ipk"
-              echo "Package filename will be: $PACKAGE_FILENAME"
+              echo "Package filename will be: $PACKAGE_FILENAME" | tee -a "$LOG_FILE"
 
               # Move sources to the correct location in the SDK
-              echo "Moving source code..."
+              echo "STEP: Moving source code" | tee -a "$LOG_FILE"
               mkdir -p /builder/package/"$PACKAGE_NAME"
               cp -r /work/* /builder/package/"$PACKAGE_NAME"/
 
               # Configure SDK
-              echo "Configuring SDK..."
+              echo "STEP: Configuring SDK" | tee -a "$LOG_FILE"
               cd /builder
               echo "CONFIG_PACKAGE_${PACKAGE_NAME}=y" >> .config
               make defconfig > /dev/null
 
               # Compile
-              echo "Compiling package..."
+              echo "STEP: Compiling package" | tee -a "$LOG_FILE"
               if [ -n "$COMPRESSION" ]; then
                 export USE_UPX=1
                 COMP="$COMPRESSION"
                 export UPX_FLAGS="--${COMP#upx-}"
-                echo "UPX compression enabled with flags: $UPX_FLAGS"
+                echo "UPX compression enabled with flags: $UPX_FLAGS" | tee -a "$LOG_FILE"
               else
                 export USE_UPX=0
               fi
 
-              make -j$(nproc) package/$PACKAGE_NAME/compile
+              # Using -j1 V=s for verbose, single-threaded build to make debugging easier
+              make -j1 V=s package/$PACKAGE_NAME/compile | tee -a "$LOG_FILE"
 
               # Copy artifacts
-              echo "Copying artifacts..."
+              echo "STEP: Copying artifacts" | tee -a "$LOG_FILE"
               PACKAGE_PATH=$(find /builder/bin/packages -name "*.ipk" -type f | head -n1)
               if [ -z "$PACKAGE_PATH" ]; then
-                echo "!!! No .ipk package found!"
+                echo "!!! No .ipk package found!" | tee -a "$LOG_FILE"
                 exit 1
               fi
-              echo "Found package at: $PACKAGE_PATH"
-              ls -lh "$PACKAGE_PATH"
+              echo "Found package at: $PACKAGE_PATH" | tee -a "$LOG_FILE"
+              ls -lh "$PACKAGE_PATH" | tee -a "$LOG_FILE"
               
               mkdir -p /artifacts
               cp "$PACKAGE_PATH" "/artifacts/$PACKAGE_FILENAME"
               
-              echo "--- Package build finished ---"
+              echo "--- Package build finished ---" | tee -a "$LOG_FILE"
             '
 
   publish-metadata:
