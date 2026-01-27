@@ -1,9 +1,5 @@
 # Ignore everything by default
 *
 
-# Don't ignore the src directory, but ignore everything in it
-!src
-src/*
-
-# Don't ignore the Makefile
-!Makefile
+# Don't ignore the Dockerfile
+!Dockerfile

@@ -88,3 +88,58 @@ This build was triggered after a series of optimizations and fixes, including:
 2.  **Analyze the Build Log:** Once the build is finished, we will analyze the `build.log` file to confirm that the build was successful and that the toolchain was not recompiled during the `docker run` step.
 3.  **Verify the `.ipk` Artifact:** We will check for the presence of the compiled `.ipk` package in the `/tmp/tollgate-artifacts` directory.
 4.  **Run `act` Again:** As a final verification step, we will run the `act` command one more time. This run should be very fast, as it will use the cached Docker image and the pre-compiled toolchain, demonstrating the full effect of our optimizations.
+
+---
+
+## Update: A New Testing Strategy
+
+To accelerate our investigation, we have adopted a new strategy to quickly test our caching and `.dockerignore` setup without waiting for the full toolchain compilation.
+
+*   **The `Dockerfile` has been temporarily modified:**
+    *   All long-running `RUN` commands (including the `make package/rust/compile` step) have been commented out.
+    *   A simple `RUN echo "Hello from the Dockerfile!"` command has been added.
+*   **The `.dockerignore` file has been made more aggressive:**
+    *   It now ignores everything except for the `Dockerfile` itself.
+
+**The Goal of This Test:**
+
+This will give us a very fast build. Our goal is to run `act` multiple times and observe the following:
+
+1.  **First Run:** The `docker build` process should run and create a new image. We will verify that the build context is very small, confirming that the `.dockerignore` file is working.
+2.  **Subsequent Runs:** On all subsequent runs (without any changes to the `Dockerfile`), the "Build Docker image" step should complete almost instantly, as it will be fully cached. This will prove that our caching strategy is working correctly.
+
+Once we have confirmed that the caching is working as expected, we will then revert the changes to the `Dockerfile` and proceed with the full build.
+
+## Next Steps
+
+1.  **Abort the Current Build:** The currently running `act` command must be stopped.
+2.  **Delete the Old Docker Image:** To ensure a clean build with the new, simplified `Dockerfile`, the `openwrt-rust-builder:aarch64_cortex-a53` image must be deleted.
+3.  **Run `act` Again:** Run the `act` command to trigger the fast, diagnostic build.
+4.  **Analyze the Output:** We will analyze the output to confirm that the build is fast and that the caching is working as expected.
+
+The caching wasn't working as expected, and I noticed that commands like `make defconfig` weren't fully thought through. Hence, we will do this manually now and document our findings. 
+
+---
+
+## New Strategy: Manual Build First
+
+After encountering several confusing and circular issues with the automated build process, we have decided to take a step back and adopt a more methodical, first-principles approach.
+
+**The Goal:** To perform a complete build of the `tollgate-wrt` package manually, from start to finish, inside a clean Docker container. This will allow us to:
+
+1.  **Understand the exact sequence of commands** required for a successful build.
+2.  **Identify any hidden dependencies** or quirks in the OpenWrt build system.
+3.  **Document each step** in a new `MANUAL_BUILD.md` file.
+4.  **Create a reliable, repeatable process** that we can then use as a blueprint for our new, improved automation.
+
+**The Process:**
+
+1.  **Create `MANUAL_BUILD.md`:** A new file has been created to document the manual build process.
+2.  **Start an Interactive Docker Container:** We will start an interactive shell inside a clean `openwrt/sdk` container.
+3.  **Execute and Document Each Step:** We will manually execute each command required for the build, documenting the command and its output in `MANUAL_BUILD.md`.
+4.  **Analyze and Optimize:** Once we have a successful manual build, we will analyze the process and decide which steps are best suited for the `Dockerfile` and which should be in the `build-package.yml` workflow.
+5.  **Re-implement Automation:** With a solid understanding of the manual process, we will then build a new, robust, and efficient automated build system.
+
+## Next Steps
+
+1.  **Start an interactive Docker container:** We will now start an interactive shell in a clean `openwrt/sdk` container to begin the manual build process.

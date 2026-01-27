@@ -38,10 +38,8 @@ RUN mkdir -p /builder/package/tollgate-wrt && \
 # 4. Configure the SDK and Toolchain
 # This creates a base .config file, explicitly sets our required toolchain option,
 # and includes a failsafe sed command to guarantee the LLVM download is disabled.
-RUN make defconfig V=s && \
-    echo "CONFIG_RUST_DOWNLOAD_CI_LLVM=n" >> .config && \
+RUN echo "CONFIG_RUST_DOWNLOAD_CI_LLVM=n" >> .config && \
     echo "CONFIG_PACKAGE_tollgate-wrt=y" >> .config && \
-    make defconfig V=s && \
     sed -i 's/--set=llvm.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/g' /builder/feeds/packages/lang/rust/Makefile
 
 # 5. Pre-compile the toolchain

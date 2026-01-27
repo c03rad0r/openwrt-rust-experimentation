@@ -185,6 +185,7 @@ jobs:
               ./scripts/feeds install rust
 
               cd /builder
+              make defconfig > /dev/null
 
               # Compile
               echo "STEP: Compiling package" | tee -a "$LOG_FILE"
