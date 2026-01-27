@@ -88,8 +88,6 @@ Now, we will launch the menuconfig interface to select the `rust` package. This 
 
 Now, we will configure the OpenWrt SDK for our specific package.
 
-
-
 ```bash
 make defconfig
 ```
@@ -101,17 +99,30 @@ Backed up in: /home/c03rad0r/openwrt-rust-experimentation/.config.installa.updat
 ```bash
 make menuconfig
 ```
+Inside the `menuconfig` interface, navigate to `Languages --->` and select `rust` by pressing `y`. Then, save and exit.
 
-```bash
-echo "CONFIG_TARGET_bcm27xx=y" > .config
-echo "CONFIG_TARGET_bcm27xx_bcm2710=y" >> .config
-echo "CONFIG_TARGET_BOARD=\"bcm27xx\"" >> .config
-echo "CONFIG_PACKAGE_tollgate-wrt=y" >> .config
+```
+root@bdd9b7f29cd8:/builder/openwrt# cat .config | grep "rust"
+CONFIG_PACKAGE_trusted-firmware-a-mt7981-nor-ddr4=y
+CONFIG_PACKAGE_trusted-firmware-a-mt7981-ram-ddr3=y
+CONFIG_PACKAGE_trusted-firmware-a-mt7981-ram-ddr4=y
+CONFIG_PACKAGE_trusted-firmware-a-mt7981-spim-nand-ubi-ddr4=y
+CONFIG_PACKAGE_trusted-firmware-a-mt7986-ram-ddr3=y
+CONFIG_PACKAGE_trusted-firmware-a-mt7986-ram-ddr4=y
+CONFIG_PACKAGE_trusted-firmware-a-mt7987-ram-comb=y
+CONFIG_PACKAGE_trusted-firmware-a-mt7988-ram-comb=y
+CONFIG_PACKAGE_trusted-firmware-a-mt7988-ram-ddr4=y
+# CONFIG_PACKAGE_kmod-keys-trusted is not set
+CONFIG_PACKAGE_rust=y
+# CONFIG_PACKAGE_luci-app-rustdesk-server is not set
 ```
 
+Its ok to do `make defconfig` after making changes to `.config`, because `make defconfig` doesn't overwrite the changes we already made to the config file.
+
+TODO: once our build pipeline is working as intended, let make a 
 
 
-Inside the `menuconfig` interface, navigate to `Languages --->` and select `rust` by pressing `y`. Then, save and exit.
+
 
 ## 6. Install Rust
 
@@ -128,7 +139,7 @@ Now that the `rust` package has been selected in the configuration, we can insta
 This is the most time-consuming step. We will now compile the cross-compilation toolchain.
 
 ```bash
-make toolchain/install -j$(nproc)
+FORCE_UNSAFE_CONFIGURE=1 make toolchain/install -j$(nproc) V=sc
 ```
 
 ## 7. Compile the Package
@@ -136,5 +147,6 @@ make toolchain/install -j$(nproc)
 Finally, we will compile the `tollgate-wrt` package.
 
 ```bash
-make package/tollgate-wrt/compile -j$(nproc)
+FORCE_UNSAFE_CONFIGURE=1
+make package/tollgate-wrt/compile -j$(nproc) V=sc
 ```
