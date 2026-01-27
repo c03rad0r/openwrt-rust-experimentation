@@ -66,3 +66,25 @@ After further discussion, we have implemented a hybrid build strategy to optimiz
     2.  **Incorrect `make` Target:** The `make toolchain/install` target might not be sufficient to pre-build all necessary components. There may be other `make` targets that need to be run in the `Dockerfile` to create a truly complete and portable toolchain.
 
 *   **Path to Resolution:** The verbose output from the `make -j1 V=s` command, which will be captured in `build.log`, is the key to solving this. It will show the exact commands being run and the `make` dependency-checking messages (e.g., "`prereq' is newer than `target'") that are triggering the recompilation. Based on this data, we can determine whether to modify the `Dockerfile`, adjust the `docker run` command, or take other corrective actions.
+
+---
+
+## Current Status (as of last update)
+
+We are in the middle of a long-running `act` build. This build is intentionally being run from a clean state to create a new, specialized Docker image that contains a pre-compiled Rust toolchain that is compatible with the `tollgate-wrt` project.
+
+This build was triggered after a series of optimizations and fixes, including:
+
+1.  **Specializing the `Dockerfile`:** The `Dockerfile` was modified to copy the `tollgate-wrt` source code and configure the OpenWrt SDK during the image build process.
+2.  **Implementing a Hybrid Build Strategy:** The `build-package.yml` workflow was updated to mount the local source code into the container at runtime, allowing for rapid development while still using the pre-compiled toolchain.
+3.  **Fixing Build Errors:** We addressed a "dubious ownership" error from Git and a "missing `rust.mk`" error from the OpenWrt build system.
+4.  **Creating a `.dockerignore` file:** We created a `.dockerignore` file to prevent unnecessary rebuilds of the Docker image when irrelevant files (like the `.git` directory) are changed.
+
+**The current build is expected to be long** because it is creating the new Docker image from scratch. Once this build is complete, subsequent builds should be significantly faster.
+
+## Next Steps
+
+1.  **Monitor the Current Build:** We will continue to monitor the current `act` run until it completes.
+2.  **Analyze the Build Log:** Once the build is finished, we will analyze the `build.log` file to confirm that the build was successful and that the toolchain was not recompiled during the `docker run` step.
+3.  **Verify the `.ipk` Artifact:** We will check for the presence of the compiled `.ipk` package in the `/tmp/tollgate-artifacts` directory.
+4.  **Run `act` Again:** As a final verification step, we will run the `act` command one more time. This run should be very fast, as it will use the cached Docker image and the pre-compiled toolchain, demonstrating the full effect of our optimizations.

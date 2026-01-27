@@ -172,6 +172,14 @@ jobs:
               PACKAGE_FILENAME="${PACKAGE_NAME}_${PACKAGE_VERSION}_${ARCHITECTURE}${COMPRESSION_SUFFIX}.ipk"
               echo "Package filename will be: $PACKAGE_FILENAME" | tee -a "$LOG_FILE"
 
+              # Fix dubious ownership and re-install rust package
+              git config --global --add safe.directory /builder/package/tollgate-wrt
+              ./scripts/feeds install rust
+
+              # Fix dubious ownership and re-install rust package
+              git config --global --add safe.directory /builder/package/tollgate-wrt
+              ./scripts/feeds install rust
+
               cd /builder
 
               # Compile
