@@ -7,16 +7,29 @@ This document outlines the step-by-step process for manually building the `tollg
 The first step is to start an interactive shell inside the `openwrt/sdk` container. This will give us a clean build environment.
 
 ```bash
-docker run -it --rm openwrt/sdk
+sudo docker run -it --rm --user root openwrt/sdk
 ```
 
 ## 2. Install Dependencies
 
-Next, we need to install the essential build tools and dependencies.
+Next, we need to install `git` and other essential build tools.
 
 ```bash
-apt-get update && apt-get install -y curl build-essential
+apt-get update && apt-get install -y git curl build-essential
 ```
+
+## 3. Clone OpenWrt Source Code
+
+Now, we will clone the OpenWrt source code into a new `openwrt` directory and `cd` into it.
+
+```bash
+git clone https://github.com/openwrt/openwrt.git
+cd openwrt
+root@bdd9b7f29cd8:/builder/openwrt# ls
+BSDmakefile  config  Config.in  COPYING  feeds.conf.default  include  LICENSES  Makefile  package  README.md  rules.mk  scripts  target  toolchain  tools
+```
+
+result: this worked
 
 ## 3. Install Rust
 
@@ -27,26 +40,88 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --defaul
 . "$HOME/.cargo/env"
 ```
 
-## 4. Update and Install Feeds
+## 4. Update Feeds
 
-Next, we will update the OpenWrt package feeds and install the `rust` package.
+Next, we will update the OpenWrt package feeds.
 
 ```bash
 ./scripts/feeds update -a
-./scripts/feeds install rust
 ```
 
-## 5. Configure the SDK
+result: update -a returned 503 unreachable for most feeds.
+
+Changing:
+```
+root@bdd9b7f29cd8:/builder/openwrt# cat feeds.conf.default 
+src-git packages https://git.openwrt.org/feed/packages.git
+src-git luci https://git.openwrt.org/project/luci.git
+src-git routing https://git.openwrt.org/feed/routing.git
+src-git telephony https://git.openwrt.org/feed/telephony.git
+src-git video https://github.com/openwrt/video.git
+#src-git targets https://github.com/openwrt/targets.git
+#src-git oldpackages http://git.openwrt.org/packages.git
+#src-link custom /usr/src/openwrt/custom-feed
+```
+
+to
+```
+root@bdd9b7f29cd8:/builder/openwrt# cat feeds.conf.default 
+src-git packages https://github.com/openwrt/packages.git
+src-git luci https://github.com/openwrt/luci.git
+src-git routing https://github.com/openwrt/routing.git
+src-git telephony https://github.com/openwrt/telephony.git
+src-git video https://github.com/openwrt/video.git
+#src-git targets https://github.com/openwrt/targets.git
+#src-git oldpackages http://git.openwrt.org/packages.git
+#src-link custom /usr/src/openwrt/custom-feed
+```
+
+`./scripts/feeds update -a` seems to work now!
+`./scripts/feeds install -a` also seems to work now!
+
+I think install only works if update worked.
+
+
+## 5. Configure the SDK and Select Rust
+
+Now, we will launch the menuconfig interface to select the `rust` package. This is a crucial step, as it makes the `rust` package available to the build system.
 
 Now, we will configure the OpenWrt SDK for our specific package.
+
+
+
+```bash
+make defconfig
+```
+
+This also works now. I think `make defconfig` only works if install worked.
+
+Backed up in: /home/c03rad0r/openwrt-rust-experimentation/.config.installa.updatea.defconfig
+
+```bash
+make menuconfig
+```
 
 ```bash
 echo "CONFIG_TARGET_bcm27xx=y" > .config
 echo "CONFIG_TARGET_bcm27xx_bcm2710=y" >> .config
 echo "CONFIG_TARGET_BOARD=\"bcm27xx\"" >> .config
 echo "CONFIG_PACKAGE_tollgate-wrt=y" >> .config
-make defconfig
 ```
+
+
+
+Inside the `menuconfig` interface, navigate to `Languages --->` and select `rust` by pressing `y`. Then, save and exit.
+
+## 6. Install Rust
+
+Now that the `rust` package has been selected in the configuration, we can install it.
+
+```bash
+./scripts/feeds install -a
+./scripts/feeds install rust
+```
+
 
 ## 6. Compile the Toolchain
 
