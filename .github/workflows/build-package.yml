@@ -180,6 +180,10 @@ jobs:
               git config --global --add safe.directory /builder/package/tollgate-wrt
               ./scripts/feeds install rust
 
+              # Fix dubious ownership and re-install rust package
+              git config --global --add safe.directory /builder/package/tollgate-wrt
+              ./scripts/feeds install rust
+
               cd /builder
 
               # Compile
