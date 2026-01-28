@@ -71,13 +71,15 @@ src-git luci https://github.com/openwrt/luci.git
 src-git routing https://github.com/openwrt/routing.git
 src-git telephony https://github.com/openwrt/telephony.git
 src-git video https://github.com/openwrt/video.git
+src-git tollgate https://github.com/OpenTollGate/tollgate-feed.git
 #src-git targets https://github.com/openwrt/targets.git
 #src-git oldpackages http://git.openwrt.org/packages.git
-#src-link custom /usr/src/openwrt/custom-feed
 ```
 
 `./scripts/feeds update -a` seems to work now!
 `./scripts/feeds install -a` also seems to work now!
+`./scripts/feeds install -p tollgate` because install -a only seems to install the default packages
+echo "CONFIG_PACKAGE_openwrt-rust-experimentation=y" >> .config && make defconfig
 
 I think install only works if update worked.
 
