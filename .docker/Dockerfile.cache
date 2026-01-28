@@ -1,0 +1,13 @@
+# Use the official OpenWrt SDK image as the base
+FROM openwrt/sdk
+
+# Set environment variables to avoid interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies
+USER root
+RUN apt-get update && apt-get install -y git curl build-essential
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly
+ENV PATH="/root/.cargo/bin:${PATH}"

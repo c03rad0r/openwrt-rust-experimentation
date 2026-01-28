@@ -1,0 +1,30 @@
+# Use the cache image as the base
+FROM openwrt-rust-builder:cache
+
+# Clone OpenWrt source code
+WORKDIR /builder
+RUN git clone https://git.openwrt.org/openwrt/openwrt.git .
+WORKDIR /builder/openwrt
+
+# Use GitHub mirrors for feeds
+RUN sed -i 's,https://git.openwrt.org/feed/packages.git,https://github.com/openwrt/packages.git,g' feeds.conf.default
+RUN sed -i 's,https://git.openwrt.org/project/luci.git,https://github.com/openwrt/luci.git,g' feeds.conf.default
+RUN sed -i 's,https://git.openwrt.org/feed/routing.git,https://github.com/openwrt/routing.git,g' feeds.conf.default
+RUN sed -i 's,https://git.openwrt.org/feed/telephony.git,https://github.com/openwrt/telephony.git,g' feeds.conf.default
+
+# Add the tollgate feed
+RUN sed -i '$a src-git tollgate https://github.com/OpenTollGate/tollgate-feed.git' feeds.conf.default
+
+# Update and install feeds
+RUN ./scripts/feeds update -a && ./scripts/feeds install -a
+
+# Configure the SDK
+RUN echo "CONFIG_TARGET_bcm27xx=y" > .config && \
+    echo "CONFIG_TARGET_bcm27xx_bcm2710=y" >> .config && \
+    echo "CONFIG_TARGET_BOARD=\"bcm27xx\"" >> .config && \
+    echo "CONFIG_PACKAGE_rust=y" >> .config && \
+    echo "CONFIG_PACKAGE_openwrt-rust-experimentation=y" >> .config && \
+    make defconfig
+
+# Compile the toolchain
+# RUN FORCE_UNSAFE_CONFIGURE=1 make toolchain/install -j$(nproc)
