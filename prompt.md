@@ -12,6 +12,7 @@ The primary goal is to understand and optimize the build process for the `tollga
 
 ## Investigation Steps Taken
 
+
 1.  **Reduced Build Matrix:** The [`build-package.yml`](.github/workflows/build-package.yml) workflow was modified to build for a single architecture (`aarch64_cortex-a53`) to simplify and speed up the investigation.
 2.  **Documentation Updates:** Several markdown files ([`BUILD_PROCESS.md`](BUILD_PROCESS.md), [`DOCKER_CACHE_TRADEOFFS.md`](DOCKER_CACHE_TRADEOFFS.md), [`DOCKER_REGISTRY_BUILD_DESIGN.md`](DOCKER_REGISTRY_BUILD_DESIGN.md), [`LOCAL_DEVELOPMENT.md`](LOCAL_DEVELOPMENT.md), [`openwrt-feeds.md`](openwrt-feeds.md)) were updated to clarify the build process, the role of Docker images, and how to use `sudo docker images` to inspect them.
 3.  **Enabled Verbose Logging:** The [`build-package.yml`](.github/workflows/build-package.yml) workflow has been modified to:

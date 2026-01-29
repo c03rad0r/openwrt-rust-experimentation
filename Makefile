@@ -26,7 +26,7 @@ PKG_BUILD_PARALLEL:=1
 PKG_USE_MIPS16:=0
 
 include $(INCLUDE_DIR)/package.mk
-include $(INCLUDE_DIR)/rust.mk
+include $(TOPDIR)/feeds/packages/lang/rust/rust.mk
 
 define Package/$(PKG_NAME)
 	SECTION:=net
