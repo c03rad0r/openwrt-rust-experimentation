@@ -6,8 +6,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
 USER root
-RUN apt-get update && apt-get install -y git curl build-essential
+RUN apt-get update && apt-get install -y git curl build-essential && apt-get install -y nano
 
 # Install Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly
 ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Clone OpenWrt source code
+WORKDIR /builder
+RUN git clone https://github.com/openwrt/openwrt.git openwrt
+WORKDIR /builder/openwrt

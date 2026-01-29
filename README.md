@@ -144,6 +144,26 @@ For more detailed information about TollGate modules and usage:
 You can find the [Module Integration Guide](src/integrating_modules.md) here.
 ## Local Development
 
+### Two-Stage Docker Build
+
+This project uses a two-stage Docker build process to optimize for build times.
+
+#### 1. Build the Cache Image
+
+First, build the `cache` image. This image contains the downloaded Rust toolchain and other dependencies. It only needs to be rebuilt when you want to update the Rust toolchain.
+
+```bash
+sudo docker build -f .docker/Dockerfile.cache -t openwrt-rust-builder:cache .
+```
+
+#### 2. Build the Builder Image
+
+Next, build the `builder` image. This image uses the `cache` image as its base and contains the rest of the build steps. This image needs to be rebuilt whenever you change the OpenWrt configuration or the `tollgate-feed`.
+
+```bash
+sudo docker build -f .docker/Dockerfile.builder -t openwrt-rust-builder:builder .
+```
+
 To build the package locally, you can use `act`, a local runner for GitHub Actions. However, you may encounter a "permission denied" error when `act` tries to connect to the Docker daemon. This is usually because your user session has not been updated with the correct group permissions.
 
 To work around this for a single session, you can run the build using the following command:
